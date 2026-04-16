@@ -41,11 +41,12 @@ if (serviceAccount) {
   }
 
   try {
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.firebasestorage.app`;
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'jan-drishti-40fdb.firebasestorage.app'
+      storageBucket: bucketName
     });
-    console.log("Firebase Admin initialized successfully using bucket:", process.env.FIREBASE_STORAGE_BUCKET || 'jan-drishti-40fdb.firebasestorage.app');
+    console.log("Firebase Admin initialized successfully using bucket:", bucketName);
   } catch (e) {
     console.error("Firebase Admin initialization failed:", e.message);
   }
