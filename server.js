@@ -43,9 +43,9 @@ if (serviceAccount) {
   try {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      storageBucket: 'seeman-38eca.firebasestorage.app'
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'jan-drishti-40fdb.firebasestorage.app'
     });
-    console.log("Firebase Admin initialized successfully");
+    console.log("Firebase Admin initialized successfully using bucket:", process.env.FIREBASE_STORAGE_BUCKET || 'jan-drishti-40fdb.firebasestorage.app');
   } catch (e) {
     console.error("Firebase Admin initialization failed:", e.message);
   }
@@ -85,7 +85,10 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
     const bucket = getBucket();
     if (!bucket) {
-      return res.status(500).json({ error: 'Storage service unavailable' });
+      return res.status(500).json({ 
+        error: 'Storage service unavailable',
+        details: 'Firebase Admin failed to initialize. Ensure FIREBASE_SERVICE_ACCOUNT is set in Vercel.'
+      });
     }
 
     const fileName = `images/${Date.now()}_${req.file.originalname}`;
@@ -120,7 +123,10 @@ app.post('/api/upload-audio', upload.single('file'), async (req, res) => {
 
     const bucket = getBucket();
     if (!bucket) {
-      return res.status(500).json({ error: 'Storage service unavailable' });
+      return res.status(500).json({ 
+        error: 'Storage service unavailable',
+        details: 'Firebase Admin failed to initialize. Ensure FIREBASE_SERVICE_ACCOUNT is set in Vercel.'
+      });
     }
 
     const fileName = `voice_recordings/recording_${Date.now()}.wav`;
