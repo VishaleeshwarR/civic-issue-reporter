@@ -780,6 +780,8 @@ async function startRecording() {
 function stopRecording() {
   if (AppState.mediaRecorder && AppState.isRecording) {
     AppState.mediaRecorder.stop();
+    // Stop all tracks to release the microphone (cuts mic access)
+    AppState.mediaRecorder.stream.getTracks().forEach(track => track.stop());
     AppState.isRecording = false;
 
     const recordBtn = document.getElementById('record-btn');
@@ -788,7 +790,7 @@ function stopRecording() {
     if (recordBtn) recordBtn.textContent = '🎤 Start Recording';
     if (recordingStatus) recordingStatus.classList.add('hidden');
   }
-}
+}    
 
 function rerecord() {
   const playback = document.getElementById('voice-playback');
@@ -1248,11 +1250,30 @@ function initializeCharts() {
 function getCurrentLocation() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
+        AppState.reportData.coordinates = { lat: latitude, lng: longitude };
+        
         const locationEl = document.getElementById('current-location');
         if (locationEl) {
-          locationEl.textContent = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          locationEl.textContent = "Fetching address...";
+        }
+
+        try {
+          // Reverse Geocoding using Nominatim (OpenStreetMap)
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const data = await response.json();
+          const address = data.display_name || "Current Location";
+          
+          AppState.reportData.location = address;
+          if (locationEl) {
+            locationEl.textContent = address;
+          }
+        } catch (error) {
+          console.error("Geocoding failed:", error);
+          if (locationEl) {
+            locationEl.textContent = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          }
         }
       },
       () => {
@@ -1260,7 +1281,8 @@ function getCurrentLocation() {
         if (locationEl) {
           locationEl.textContent = 'MG Road, Bangalore';
         }
-      }
+      },
+      { enableHighAccuracy: true }
     );
   }
 }
