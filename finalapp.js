@@ -364,6 +364,8 @@ function showView(viewId) {
     loadAdminData();
   } else if (viewId === 'report-view') {
     resetReportSteps();
+    // Refresh location for the new report
+    getCurrentLocation();
     setTimeout(() => initializeCamera(), 100);
   }
 }
@@ -417,7 +419,14 @@ function hideUserProfile() {
 // Report Functions
 function resetReportSteps() {
   AppState.currentStep = 1;
-  AppState.reportData = {};
+  // Preserve coordinates and location name if they already exist
+  const existingCoords = AppState.reportData.coordinates;
+  const existingLoc = AppState.reportData.location;
+  
+  AppState.reportData = {
+    coordinates: existingCoords,
+    location: existingLoc
+  };
 
   // Reset UI
   const steps = document.querySelectorAll('.step');
