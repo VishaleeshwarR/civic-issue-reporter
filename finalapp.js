@@ -1,4 +1,3 @@
-// Firebase Configuration (Demo - replace with actual config)
 const firebaseConfig = {
   apiKey: "AIzaSyA_x4--QjSHO8ogt2m4MsQZInf2UyeFKwo",
   authDomain: "jan-drishti-40fdb.firebaseapp.com",
@@ -441,6 +440,7 @@ function resetReportSteps() {
   // Reset camera
   if (window.currentStream) {
     window.currentStream.getTracks().forEach(track => track.stop());
+    window.currentStream = null;
   }
   
   // Reset photo preview
@@ -507,6 +507,28 @@ async function initializeCamera() {
     console.error('Camera access denied:', error);
     showToast('Camera not available. You can still upload from gallery.', 'warning');
   }
+
+  // Get current location
+  const locationEl = document.getElementById('current-location');
+  if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        AppState.reportData.coordinates = { lat: latitude, lng: longitude };
+        // For visual sake, a reverse geocode would be needed, but we can display coordinates
+        const locString = `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
+        AppState.reportData.location = locString;
+        if (locationEl) locationEl.textContent = locString;
+      },
+      (error) => {
+        console.error("Location error:", error);
+        AppState.reportData.location = "Location access denied";
+        if (locationEl) locationEl.textContent = "Location access denied";
+      }
+    );
+  } else {
+    if (locationEl) locationEl.textContent = "Geolocation not supported";
+  }
 }
 
 function capturePhoto() {
@@ -533,10 +555,12 @@ function capturePhoto() {
   ctx.drawImage(video, 0, 0);
   
   // Convert to blob and show preview
-  canvas.toBlob(blob => {
+  canvas.toBlob(async blob => {
     const url = URL.createObjectURL(blob);
     AppState.reportData.imageBlob = blob;
-    AppState.reportData.imageUrl = url;
+    
+    // Upload the blob from the camera to the backend
+    await uploadImage(blob);
     
     preview.innerHTML = `<img src="${url}" alt="Captured photo">`;
     preview.classList.remove('hidden');
@@ -545,6 +569,7 @@ function capturePhoto() {
     // Stop camera stream
     if (window.currentStream) {
       window.currentStream.getTracks().forEach(track => track.stop());
+      window.currentStream = null;
     }
     
     showToast('Photo captured successfully!', 'success');
@@ -552,14 +577,20 @@ function capturePhoto() {
   }, 'image/jpeg', 0.8);
 }
 
-// Upload and get URL
 async function uploadImage(file) {
-    const storageRef = storage.ref(`images/${file.name}`);
-    await storageRef.put(file);   // upload
-    const url = await storageRef.getDownloadURL(); // get URL
-    AppState.imageUrl = url;
-    console.log("Image URL:", url);
-    return url;
+    const formData = new FormData();
+    formData.append('file', file, 'capture.jpg');
+    
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const data = await response.json();
+    AppState.imageUrl = data.url;
+    AppState.reportData.imageUrl = data.url;
+    console.log("Image URL:", data.url);
+    return data.url;
 }
 
 async function handleFileSelect(event) {
@@ -570,6 +601,12 @@ async function handleFileSelect(event) {
     showToast('Please select a valid image file', 'error');
     return;
   }
+  // Stop camera when selecting from gallery
+  if (window.currentStream) {
+    window.currentStream.getTracks().forEach(track => track.stop());
+    window.currentStream = null;
+  }
+
   await uploadImage(file)
   const url = URL.createObjectURL(file);
   AppState.reportData.imageBlob = file;
@@ -599,27 +636,55 @@ async function startAIAnalysis(imageUrl) {
   imageUrl = imageUrl+"?v="+randomNum
   console.log(imageUrl)
   // Simulate AI processing
-  const response = await fetch('https://serverless.roboflow.com/infer/workflows/civic-issue/custom-workflow', {
+  const response = await fetch('/api/analyze', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-        api_key: '9NnLUfhxelNQFcmIcU5s',
-        inputs: {
-            "image": {"type": "url", "value": imageUrl}
-        }
-    })
+    body: JSON.stringify({ imageUrl: imageUrl })
 });
 
     const result = await response.json();
     console.log(result);
-    console.log(result.outputs[0].output.output);
+    // Add safety check
+    if (!result.outputs || !result.outputs[0]) {
+       showToast('AI analysis failed', 'error');
+       AppState.currentReportStep = 1;
+       updateReportSteps();
+       return;
+    }
+    const detectedIssue = result.outputs[0].output.output;
+    console.log(detectedIssue);
+    
+    // Roboflow Fallback Check
+    if (detectedIssue.toLowerCase().includes("not an civic issue") || detectedIssue.toLowerCase().includes("not a civic issue") || detectedIssue.toLowerCase().includes("sorry")) {
+        showToast('Image rejected: Not a valid civic issue', 'error');
+        // Reset to first capture state
+        AppState.currentReportStep = 1;
+        updateReportSteps();
+        
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (resultEl) resultEl.classList.add('hidden');
+        
+        // Return to camera feed
+        const previewEl = document.getElementById('photo-preview');
+        const cameraFeedEl = document.getElementById('camera-feed');
+        if (previewEl) previewEl.classList.add('hidden');
+        if (cameraFeedEl) cameraFeedEl.classList.remove('hidden');
+        
+        // Ensure camera stays bound
+        if (!window.currentStream) { initCamera(); }
+        return;
+    }
+    
+    // Store detected type in AppState so it carries to the report
+    AppState.reportData.detectedType = detectedIssue;
+    AppState.reportData.category = detectedIssue;
+    
     const detectedTypeEl = document.getElementById('detected-type');
-    if (detectedTypeEl) detectedTypeEl.textContent = result.outputs[0].output.output;
+    if (detectedTypeEl) detectedTypeEl.textContent = detectedIssue;
     if (loadingEl) loadingEl.classList.add('hidden');
     if (resultEl) resultEl.classList.remove('hidden');
-  
 }
 
 function acceptAnalysis() {
@@ -732,62 +797,48 @@ function rerecord() {
 
 async function uploadRecording(blob) {
   try {
-    const timestamp = Date.now();
-    const fileName = `voice_recordings/recording_${timestamp}.wav`;
-    const storageRef = storage.ref().child(fileName);
+    const formData = new FormData();
+    formData.append('file', blob, `recording_${Date.now()}.wav`);
     
-    const snapshot = await storageRef.put(blob);
-    const downloadURL = await snapshot.ref.getDownloadURL();
+    const response = await fetch('/api/upload-audio', {
+      method: 'POST',
+      body: formData
+    });
     
+    const data = await response.json();
     showToast('Recording uploaded!', 'success');
-    console.log('Download URL:', downloadURL);
+    console.log('Download URL:', data.url);
     
-    return downloadURL;
+    return data.url;
   } catch (error) {
     showToast('Failed to upload recording', 'error');
     console.error(error);
   }
 }
 
-async function getTranscriptText(transcriptId) {
-  let status = "";
-  let transcriptText = "";
-
-  while (status !== "completed" && status !== "failed") {
-    const response = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
-      headers: { "authorization": "b84dbfe32f8f4add9f3c27b80e297025" }
-    });
-    const data = await response.json();
-    status = data.status;
-
-    if (status === "completed") {
-      transcriptText = data.text; // The full transcript text
-      return transcriptText;
-    } else if (status === "failed") {
-      throw new Error("Transcription failed");
-    }
-
-    // Wait a bit before checking again
-    await new Promise(resolve => setTimeout(resolve, 3000));
-  }
-}
-
-
 async function transcribe(audioUrl) {
-  const response = await fetch("https://api.assemblyai.com/v2/transcript", {
-    method: "POST",
-    headers: {
-      "authorization": "b84dbfe32f8f4add9f3c27b80e297025",
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({ audio_url: audioUrl })
-  });
-
-  const data = await response.json();
-  console.log(data);
-  const text = await getTranscriptText(data.id)
-  console.log(text);
-  return text
+  try {
+    const response = await fetch("/api/transcribe", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ audioUrl: audioUrl })
+    });
+    
+    const data = await response.json();
+    console.log(data);
+    if (data.error) {
+      console.error('Transcription error:', data.error);
+      showToast('Could not transcribe audio. Using text description instead.', 'warning');
+      return null;
+    }
+    return data.text;
+  } catch (error) {
+    console.error('Transcription failed:', error);
+    showToast('Transcription failed. You can type a description instead.', 'warning');
+    return null;
+  }
 }
 
 async function proceedToSubmit() {
@@ -817,10 +868,10 @@ function populateReportPreview() {
     imagePreview.src = AppState.reportData.imageUrl;
   }
   if (issueType) {
-    issueType.textContent = AppState.reportData.category || 'Road Infrastructure';
+    issueType.textContent = AppState.reportData.category || AppState.reportData.detectedType || 'Unknown';
   }
   if (location) {
-    location.textContent = 'MG Road, Bangalore';
+    location.textContent = AppState.reportData.location || 'Detecting location...';
   }
   if (description) {
     description.textContent = AppState.reportData.voiceNote || 'Issue reported via mobile app';
@@ -841,14 +892,14 @@ function submitReport() {
   // Create new issue
   const newIssue = {
     id: generateId(),
-    title: `${AppState.reportData.category || 'Road Infrastructure'} Issue`,
+    title: `${AppState.reportData.category || AppState.reportData.detectedType || 'Road Infrastructure'} Issue`,
     description: AppState.reportData.voiceNote || 'Issue reported via mobile app',
-    category: AppState.reportData.category || 'Road Infrastructure',
+    category: AppState.reportData.category || AppState.reportData.detectedType || 'Road Infrastructure',
     status: 'Reported',
     priority: AppState.reportData.severity || 'Medium',
-    location: 'MG Road, Bangalore',
-    coordinates: {lat: 12.9716, lng: 77.5946},
-    submittedBy: AppState.currentUser.id,
+    location: AppState.reportData.location || 'Unknown Location',
+    coordinates: AppState.reportData.coordinates || {lat: 12.9716, lng: 77.5946},
+    submittedBy: AppState.currentUser ? AppState.currentUser.id : 'unknown',
     assignedTo: 'Auto-assigned',
     submittedDate: new Date().toISOString().split('T')[0],
     votes: 0,
@@ -1015,6 +1066,47 @@ function showAdminTab(tabName) {
 
 function loadAdminData() {
   loadAdminIssues();
+  setTimeout(() => initializeAdminMap(), 300); // Give CSS time to layout container
+}
+
+let adminMap = null;
+function initializeAdminMap() {
+    if (typeof L === 'undefined') return;
+    
+    if (adminMap !== null) {
+        adminMap.invalidateSize();
+        return;
+    }
+    
+    const container = document.getElementById('leaflet-map-container');
+    if (!container) return;
+    
+    // Center around Vellore
+    adminMap = L.map('leaflet-map-container').setView([12.9165, 79.1325], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(adminMap);
+    
+    // Demo Mock Pins for Priorities
+    const priorities = [
+        { lat: 12.9180, lng: 79.1350, type: 'Massive Pothole', color: '#DC2626' }, 
+        { lat: 12.9100, lng: 79.1290, type: 'Sewer Leak', color: '#D97706' }, 
+        { lat: 12.9250, lng: 79.1400, type: 'Fallen Tree - Blockage', color: '#DC2626' }, 
+        { lat: 12.9120, lng: 79.1450, type: 'Streetlight Outage', color: '#2563EB' }, 
+        { lat: 12.9050, lng: 79.1300, type: 'Overflowing Bin', color: '#2563EB' } 
+    ];
+
+    priorities.forEach(pin => {
+        L.circleMarker([pin.lat, pin.lng], {
+            color: pin.color,
+            fillColor: pin.color,
+            fillOpacity: 0.9,
+            radius: 9,
+            weight: 2
+        }).addTo(adminMap).bindPopup(`<b>${pin.type}</b><br>Priority Area`);
+    });
 }
 
 function loadAdminIssues() {

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CivicConnect - Report Issues</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="sihstyle.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#218085">
     <meta name="description" content="Report and track civic issues in your community">
@@ -17,6 +17,10 @@
     
     <!-- Chart.js for analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Leaflet Map JS and CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
     <!-- Loading Screen -->
@@ -75,7 +79,6 @@
                     <p class="header-subtitle" id="user-location">MG Road, Bangalore</p>
                 </div>
                 <div class="header-right">
-                    <button class="btn btn--secondary btn--sm" onclick="toggleTheme()">🌓</button>
                     <button class="btn btn--secondary btn--sm" onclick="showUserProfile()">👤</button>
                     <select class="form-control" id="language-selector" onchange="changeLanguage()">
                         <option value="en">English</option>
@@ -408,14 +411,11 @@
                     </div>
                     
                     <div class="issues-map">
-                        <div class="map-placeholder">
-                            🗺️ Interactive Map
-                            <p>Issues marked with color-coded pins</p>
-                            <div class="map-legend">
-                                <div class="legend-item"><span class="legend-color" style="background: #ff5555;"></span> High Priority</div>
-                                <div class="legend-item"><span class="legend-color" style="background: #ffaa00;"></span> Medium Priority</div>
-                                <div class="legend-item"><span class="legend-color" style="background: #00aa00;"></span> Low Priority</div>
-                            </div>
+                        <div id="leaflet-map-container" style="height: 400px; width: 100%; border-radius: 8px;"></div>
+                        <div class="admin-map-legend" style="padding: 10px; display: flex; gap: 15px; background: var(--color-surface); border-radius: 8px; margin-top: 10px;">
+                            <div class="legend-item"><span class="legend-color" style="display:inline-block; width:12px; height:12px; border-radius:50%; background: #DC2626; margin-right: 5px;"></span> High Priority</div>
+                            <div class="legend-item"><span class="legend-color" style="display:inline-block; width:12px; height:12px; border-radius:50%; background: #D97706; margin-right: 5px;"></span> Medium Priority</div>
+                            <div class="legend-item"><span class="legend-color" style="display:inline-block; width:12px; height:12px; border-radius:50%; background: #2563EB; margin-right: 5px;"></span> Low Priority</div>
                         </div>
                     </div>
                     

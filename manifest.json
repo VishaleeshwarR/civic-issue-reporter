@@ -1,0 +1,9 @@
+{
+  "name": "CivicConnect",
+  "short_name": "CivicConnect",
+  "start_url": "/finalindex.html",
+  "display": "standalone",
+  "theme_color": "#218085",
+  "background_color": "#1a1a2e",
+  "icons": []
+}
