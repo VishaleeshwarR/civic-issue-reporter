@@ -1,13 +1,12 @@
-
 // REPLACE THIS IN finalapp.js WITH YOUR ACTUAL SEEMAN PROJECT CONFIG
 const firebaseConfig = {
-  apiKey: "YOUR_ACTUAL_SEEMAN_API_KEY", // Put your real API Key here
+  apiKey: "AIzaSyD5kNaFgSYkBNJcRuTjc2RmGYrhIGHXpyM",
   authDomain: "seeman-38eca.firebaseapp.com",
   projectId: "seeman-38eca",
   storageBucket: "seeman-38eca.firebasestorage.app",
-  messagingSenderId: "1234567890", // Get this from Firebase Console
-  appId: "1:1234567890:web:abcde", // Get this from Firebase Console
-  measurementId: "G-XXXXXXX"      // Optional
+  messagingSenderId: "255676919810",
+  appId: "1:255676919810:web:5f95b359a840c44389b71b",
+  measurementId: "G-Z4BG9DX2XD"
 };
 
 
