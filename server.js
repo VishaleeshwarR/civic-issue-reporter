@@ -7,20 +7,30 @@ const multer = require('multer');
 const path = require('path');
 
 // Initialize Firebase Admin
+console.log("Checking FIREBASE_SERVICE_ACCOUNT...");
 let serviceAccount;
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  console.log("FIREBASE_SERVICE_ACCOUNT env var found.");
   try {
-    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    // Handle potential double quotes if the user pasted it with quotes in Vercel UI
+    let rawJson = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+    if (rawJson.startsWith('"') && rawJson.endsWith('"')) {
+        rawJson = rawJson.substring(1, rawJson.length - 1);
+    }
+    serviceAccount = JSON.parse(rawJson);
+    console.log("Successfully parsed FIREBASE_SERVICE_ACCOUNT JSON");
   } catch (e) {
-    console.error("Invalid FIREBASE_SERVICE_ACCOUNT env var:", e);
+    console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT JSON:", e.message);
   }
 }
 
 if (!serviceAccount) {
+  console.log("Attempting to load serviceAccountKey.json...");
   try {
     serviceAccount = require('./serviceAccountKey.json');
+    console.log("Loaded serviceAccountKey.json successfully");
   } catch (e) {
-    console.warn("serviceAccountKey.json not found, ensure FIREBASE_SERVICE_ACCOUNT is set.");
+    console.warn("serviceAccountKey.json not found.");
   }
 }
 

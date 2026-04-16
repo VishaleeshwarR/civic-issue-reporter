@@ -649,8 +649,8 @@ async function startAIAnalysis(imageUrl) {
     // Add safety check
     if (!result.outputs || !result.outputs[0]) {
        showToast('AI analysis failed', 'error');
-       AppState.currentReportStep = 1;
-       updateReportSteps();
+       AppState.currentStep = 1;
+       resetReportSteps();
        return;
     }
     const detectedIssue = result.outputs[0].output.output;
@@ -660,8 +660,8 @@ async function startAIAnalysis(imageUrl) {
     if (detectedIssue.toLowerCase().includes("not an civic issue") || detectedIssue.toLowerCase().includes("not a civic issue") || detectedIssue.toLowerCase().includes("sorry")) {
         showToast('Image rejected: Not a valid civic issue', 'error');
         // Reset to first capture state
-        AppState.currentReportStep = 1;
-        updateReportSteps();
+        AppState.currentStep = 1;
+        resetReportSteps();
         
         if (loadingEl) loadingEl.classList.add('hidden');
         if (resultEl) resultEl.classList.add('hidden');
