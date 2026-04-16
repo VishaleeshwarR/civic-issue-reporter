@@ -25,13 +25,31 @@ if (!serviceAccount) {
 }
 
 if (serviceAccount) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket: 'seeman-38eca.firebasestorage.app'
-  });
+  // Fix for private key newlines in environment variables
+  if (serviceAccount.private_key) {
+    serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+  }
+
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: 'seeman-38eca.firebasestorage.app'
+    });
+    console.log("Firebase Admin initialized successfully");
+  } catch (e) {
+    console.error("Firebase Admin initialization failed:", e.message);
+  }
 }
 
-const bucket = admin.storage().bucket();
+// Lazy bucket getter to avoid crashing if Firebase isn't ready
+const getBucket = () => {
+    try {
+        return admin.storage().bucket();
+    } catch (e) {
+        console.error("Bucket access failed - Firebase might not be initialized:", e.message);
+        return null;
+    }
+};
 
 // Initialize AssemblyAI
 const client = new AssemblyAI({
@@ -53,6 +71,11 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const bucket = getBucket();
+    if (!bucket) {
+      return res.status(500).json({ error: 'Storage service unavailable' });
     }
 
     const fileName = `images/${Date.now()}_${req.file.originalname}`;
@@ -79,6 +102,11 @@ app.post('/api/upload-audio', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const bucket = getBucket();
+    if (!bucket) {
+      return res.status(500).json({ error: 'Storage service unavailable' });
     }
 
     const fileName = `voice_recordings/recording_${Date.now()}.wav`;

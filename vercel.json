@@ -20,12 +20,24 @@
     {
       "src": "*.svg",
       "use": "@vercel/static"
+    },
+    {
+      "src": "favicon.ico",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "manifest.json",
+      "use": "@vercel/static"
     }
   ],
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/server.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/$1"
     },
     {
       "source": "/",
