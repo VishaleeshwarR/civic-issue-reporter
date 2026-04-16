@@ -103,7 +103,11 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     res.json({ url: publicUrl });
   } catch (error) {
     console.error('Upload Error:', error);
-    res.status(500).json({ error: 'Failed to upload file' });
+    res.status(500).json({ 
+      error: 'Failed to upload file', 
+      details: error.message,
+      stack: error.stack 
+    });
   }
 });
 
@@ -133,7 +137,11 @@ app.post('/api/upload-audio', upload.single('file'), async (req, res) => {
     res.json({ url: publicUrl });
   } catch (error) {
     console.error('Audio Upload Error:', error);
-    res.status(500).json({ error: 'Failed to upload audio' });
+    res.status(500).json({ 
+      error: 'Failed to upload audio', 
+      details: error.message,
+      stack: error.stack
+    });
   }
 });
 
