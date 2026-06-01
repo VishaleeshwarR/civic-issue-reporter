@@ -2,45 +2,58 @@
 
 SIH Hackathon project to report civic issues. This repository contains a web frontend built with HTML, CSS and JavaScript.
 
-## Description
+## Key Features
 
-A simple application to let citizens report civic issues (potholes, streetlight outages, waste collection problems, etc.) to the local authorities. Created for Smart India Hackathon (SIH).
+- Submit civic issues (potholes, streetlight outages, garbage complaints, etc.)
+- View list of reported issues
+- Attach photos and location (if the frontend supports it)
+- Simple admin/authority view (if implemented)
 
-## Tech stack
+## Tech Stack
 
 - Frontend: JavaScript, HTML, CSS
-- (Possible) Backend: see repository for server or API code
+- (Optional) Backend: Node/Express or any REST API (check repository)
 
 ## Prerequisites
 
 - Node.js and npm (if the project includes a package.json)
 
-## Setup & Run
-
-1. Clone the repository:
+## Cloning the repository
 
 ```bash
 git clone https://github.com/VishaleeshwarR/civic-issue-reporter.git
 cd civic-issue-reporter
 ```
 
-2. Install dependencies (if any):
+## Install packages
 
 ```bash
 npm install
 ```
 
-3. Run the project (if a dev script exists):
+## Setup & Run
+
+If the project includes a dev script:
 
 ```bash
 npm run dev
 ```
 
-If the project is a purely static frontend, serve it with a simple static server such as `npx serve` or open the `index.html` in a browser.
+If it is a static frontend, serve with a static server or open `index.html` in a browser:
+
+```bash
+npx serve
+```
+
+## Project structure (example)
+
+- `index.html` — Main entry (if static)
+- `src/` — Frontend source (if using a bundler)
+- `assets/` — Images and static assets
 
 ## Contributing
 
-Contributions, issues and feature requests are welcome. Please open an issue or submit a pull request.
+Contributions are welcome. Open an issue or submit a pull request.
 
 ## License
 
